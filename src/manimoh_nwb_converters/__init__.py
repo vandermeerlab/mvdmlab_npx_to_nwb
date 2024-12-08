@@ -1,5 +1,2 @@
-from .odorseq_convert_lfp import OdorSeqLFPInterface
-from .odorseq_nwbconverter import OdorSeqNWBConverter
-
-    
-    
+from .odorseq_convert_lfp import add_lfp_electrodes_to_nwb
+from .odorseq_convert_lfp import add_lfp_data_to_nwb
