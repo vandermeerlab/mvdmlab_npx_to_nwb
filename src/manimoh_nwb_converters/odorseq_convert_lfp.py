@@ -89,6 +89,7 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
         temp_ch_ids = np.asarray(lfp_matfile[device_label]['channel_ids'][:], dtype='uint32')
         temp_ch_ids = temp_ch_ids.T.view('U1')
         channel_ids = np.asarray([''.join(x).strip() for x in temp_ch_ids])
+        electrode_counter += channel_ids.shape[0]
                 
         lfp_fs = lfp_matfile[device_label]['lfp_fs'][:].flatten()[0]
         

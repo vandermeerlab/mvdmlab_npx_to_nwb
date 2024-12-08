@@ -55,15 +55,16 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     keywords=["ecephys", "exploration", "wanderlust"], # needs to be edited
     )
     
-
-    # add LFP electrodes table to nwb file
+    # Add LFP data
     device_labels = []
     if os.path.exists(session_dir + "//imec0_clean_lfp.mat"):
         device_labels.append("imec0")
     if os.path.exists(session_dir + "//imec1_clean_lfp.mat"):
         device_labels.append("imec1")
-
+    # add LFP electrodes table to nwb file
     mnc.add_lfp_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+    # add LFP traces to nwb file
+    mnc.add_lfp_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
         
     # add spiking data
 
