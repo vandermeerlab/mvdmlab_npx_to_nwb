@@ -3,6 +3,7 @@
 import h5py
 import numpy as np
 import math
+from hdmf.backends.hdf5.h5_utils import H5DataIO
 
 from pynwb.ecephys import ElectricalSeries, LFP
 
@@ -113,8 +114,10 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     else:
         lfp_data = np.asarray(lfp_data[0]).squeeze()
 
+    # The compression stuff doesn't work yet (the output NWB file is smaller but can't be validated or read by NWBinspector)
+    # lfp_es = ElectricalSeries(name='LFP', data=H5DataIO(lfp_data, compression=True), electrodes=lfp_table, rate=lfp_fs, starting_time=lfp_tvec[0])
     lfp_es = ElectricalSeries(name='LFP', data=lfp_data, electrodes=lfp_table, rate=lfp_fs, starting_time=lfp_tvec[0])
     lfp_module = nwbfile.create_processing_module(
-        name="LFP", description="Subsampled and bandpass filtered LFP data"
+        name="ecephys", description="LFP data subsampled at 2500 Hz and bandpass filtered in the range 1-400 Hz "
     )
     lfp_module.add(lfp_es)

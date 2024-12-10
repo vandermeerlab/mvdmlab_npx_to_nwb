@@ -67,7 +67,9 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     mnc.add_lfp_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
         
     # add spiking data
-
+    
+    
+    # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
     io.write(out_nwb)
 
