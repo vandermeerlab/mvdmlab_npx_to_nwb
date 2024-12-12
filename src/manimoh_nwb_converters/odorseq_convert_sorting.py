@@ -29,7 +29,7 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
         # Reading and parsing the .mat file to add the electrodes that didn't exist in the electrode table before
         sorting_matfile= sio.loadmat(session_dir + '\\' + 'clean_units_' + device_label + '.mat')
     
-        # get channel_ids TODO: See if we need to get rid the 'imec0ap.AP#' 
+        # get channel_ids
         channel_ids = sorting_matfile['channel_ids']
         
         # get shank_ids in array
@@ -57,9 +57,9 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
             # Can't seemn to add electrodes properly during add_unit, so tabling this for now    
             # # add electrodes to the electrode table
             # for ielec,elec in enumerate(np.where(shank_ids == iShank)[0]):
-            #     cur_channel_ids = nwbfile.electrodes.to_dataframe()['channel_id'].values.tolist()
+            #     cur_channel_ids = nwbfile.electrodes.to_dataframe()['label'].values.tolist()
             #     if channel_ids[elec] not in cur_channel_ids:
-            #         nwbfile.add_electrode(group=electrode_group, channel_id = channel_ids[elec], \
+            #         nwbfile.add_electrode(group=electrode_group, label = channel_ids[elec], \
             #             location="brain area",  #TODO: Need to figure this out, should this be the same as depth
             #         )
 
@@ -72,7 +72,7 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
     nwbfile.add_unit_column(name='global_id', description='ID to uniquely identify the unit')
     for device_label in device_labels:
         # Determine whether probe1 or probe2 is imec0s
-        if session_metadata['probe1_ID'] == 'device_label':
+        if session_metadata['probe1_ID'] == device_label:
             device_key = 'probe1'
         else:
             device_key ='probe2'
@@ -110,7 +110,7 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
         depths = sorting_matfile['depths'].squeeze()
         depths = (device_metadata['Depth']*1000 - depths) * np.cos(math.radians(device_metadata['roll']))
         
-        hemisphere = device_metadata['hemisphere']
+        this_hemi = device_metadata['hemisphere']
             
         # get unit_ids 
         unit_ids = sorting_matfile['unit_ids'].squeeze()
@@ -150,5 +150,5 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
                     global_id=this_id, \
                     electrode_group=this_electrode_group, \
                     depth=depths[x], \
-                    hemisphere=hemisphere)
+                    hemisphere=this_hemi)
         

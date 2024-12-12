@@ -13,13 +13,13 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
     '''
     
     # Add electrode column to nwb file (This will get poulated later)
-    nwbfile.add_electrode_column(name="channel_id", description="Identifier for the channel on the probe")
+    nwbfile.add_electrode_column(name="label", description="Identifier for the channel on the probe") # Calling this label to ensure compatibility with pynapple
     nwbfile.add_electrode_column(name="depth", description="Location of the electrode on the probe")
     nwbfile.add_electrode_column(name="hemisphere", description="Location of the electrode on the probe")
     
     for device_label in device_labels:
     # Determine whether probe1 or probe2 is imec0s
-        if session_metadata['probe1_ID'] == 'device_label':
+        if session_metadata['probe1_ID'] == device_label:
             device_key = 'probe1'
         else:
             device_key ='probe2'
@@ -36,7 +36,7 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
         # Reading and parsing the .mat file to create the electrode table
         lfp_matfile = h5py.File(session_dir + '\\' + device_label + '_clean_lfp.mat', 'r')
     
-        # get channel_ids TODO: See if we need to get rid the 'imec0ap.AP#' 
+        # get channel_ids
         temp_ch_ids = np.asarray(lfp_matfile[device_label]['channel_ids'][:], dtype='uint32')
         temp_ch_ids = temp_ch_ids.T.view('U1')
         channel_ids = np.asarray([''.join(x).strip() for x in temp_ch_ids])
@@ -62,7 +62,7 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
             )
             # add electrodes to the electrode table
             for ielec,elec in enumerate(np.where(shank_ids == iShank)[0]):
-                nwbfile.add_electrode(group=electrode_group, channel_id = channel_ids[elec], \
+                nwbfile.add_electrode(group=electrode_group, label = channel_ids[elec], \
                     depth=depths[elec], hemisphere=hemisphere, location="brain area")
                 
 
