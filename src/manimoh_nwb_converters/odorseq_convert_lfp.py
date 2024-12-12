@@ -1,4 +1,4 @@
-"""Primary script for converting preprocessed mvdmlab NPX LFP data to NWB format."""
+"""Various functions to help convert preprocessed mvdmlab NPX LFP data to NWB format."""
 
 import h5py
 import numpy as np
@@ -11,9 +11,11 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
     '''
     Function to add LFP electrodes and probe information to the NWB file.
     '''
-    electrode_counter = 0
+    
     # Add electrode column to nwb file (This will get poulated later)
     nwbfile.add_electrode_column(name="channel_id", description="Identifier for the channel on the probe")
+    nwbfile.add_electrode_column(name="depth", description="Location of the electrode on the probe")
+    nwbfile.add_electrode_column(name="hemisphere", description="Location of the electrode on the probe")
     
     for device_label in device_labels:
     # Determine whether probe1 or probe2 is imec0s
@@ -46,28 +48,29 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
         depths = lfp_matfile[device_label]['depths'][:].flatten()
         depths = (device_metadata['Depth']*1000 - depths) * np.cos(math.radians(device_metadata['roll']))
         
+        hemisphere = device_metadata['hemisphere']
         
         unique_shanks = np.unique(shank_ids).tolist()
         
+        #TODO: Resolve brain area later
         for iShank in unique_shanks:
             electrode_group = nwbfile.create_electrode_group(
                 name="{}.shank{}".format(device_label,iShank),
                 description="electrode group for shank {} on {}".format(iShank, device_label),
                 device=device,
-                location="brain area", # Need to figure this out, should this be the same as depth
+                location="brain area",
             )
             # add electrodes to the electrode table
             for ielec,elec in enumerate(np.where(shank_ids == iShank)[0]):
-                # print
                 nwbfile.add_electrode(group=electrode_group, channel_id = channel_ids[elec], \
-                    location="brain area",  # Need to figure this out, should this be the same as depth
-                )
-                electrode_counter += 1
+                    depth=depths[elec], hemisphere=hemisphere, location="brain area")
                 
 
     
 def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
-    
+    ''' 
+    Function to add LFP traces to the NWB file.
+    '''
     lfp_fs = 0 # Assumes that this gets overwritten and also that all devices have the same fs
     lfp_tvec = 0 # Assumes that this gets overwritten and also that all devices have the same tvec
     lfp_data = []
@@ -114,10 +117,11 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     else:
         lfp_data = np.asarray(lfp_data[0]).squeeze()
 
-    # The compression stuff doesn't work yet (the output NWB file is smaller but can't be validated or read by NWBinspector)
-    # lfp_es = ElectricalSeries(name='LFP', data=H5DataIO(lfp_data, compression=True), electrodes=lfp_table, rate=lfp_fs, starting_time=lfp_tvec[0])
-    lfp_es = ElectricalSeries(name='LFP', data=lfp_data, electrodes=lfp_table, rate=lfp_fs, starting_time=lfp_tvec[0])
+    lfp_es = ElectricalSeries(name='LFP', data=H5DataIO(lfp_data, compression=True), electrodes=lfp_table, rate=lfp_fs, \
+        starting_time=lfp_tvec[0], description = "Raw data subsampled  2500 Hz and bandpass filtered in the range 1-400 Hz")
+    # To save without compression, try the line below
+    # lfp_es = ElectricalSeries(name='LFP', data=lfp_data, electrodes=lfp_table, rate=lfp_fs, starting_time=lfp_tvec[0])
     lfp_module = nwbfile.create_processing_module(
-        name="ecephys", description="LFP data subsampled at 2500 Hz and bandpass filtered in the range 1-400 Hz "
+        name="ecephys", description="LFP data obtained from rawdata"
     )
     lfp_module.add(lfp_es)

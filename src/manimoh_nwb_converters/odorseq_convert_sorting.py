@@ -54,20 +54,24 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
             else:
                 electrode_group = nwbfile.electrode_groups[this_shank_group]
                 
-            # add electrodes to the electrode table
-            for ielec,elec in enumerate(np.where(shank_ids == iShank)[0]):
-                cur_channel_ids = nwbfile.electrodes.to_dataframe()['channel_id'].values.tolist()
-                if channel_ids[elec] not in cur_channel_ids:
-                    nwbfile.add_electrode(group=electrode_group, channel_id = channel_ids[elec], \
-                        location="brain area",  #TODO: Need to figure this out, should this be the same as depth
-                    )
+            # Can't seemn to add electrodes properly during add_unit, so tabling this for now    
+            # # add electrodes to the electrode table
+            # for ielec,elec in enumerate(np.where(shank_ids == iShank)[0]):
+            #     cur_channel_ids = nwbfile.electrodes.to_dataframe()['channel_id'].values.tolist()
+            #     if channel_ids[elec] not in cur_channel_ids:
+            #         nwbfile.add_electrode(group=electrode_group, channel_id = channel_ids[elec], \
+            #             location="brain area",  #TODO: Need to figure this out, should this be the same as depth
+            #         )
 
 def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     '''
     Function to add spikesorting data to the NWB file.
     '''
+    nwbfile.add_unit_column(name='depth', description='Depth of the unit from the surface of the brain')
+    nwbfile.add_unit_column(name='hemisphere', description='Hemisphere of the brain where the unit was recorded')
+    nwbfile.add_unit_column(name='global_id', description='ID to uniquely identify the unit')
     for device_label in device_labels:
-    # Determine whether probe1 or probe2 is imec0s
+        # Determine whether probe1 or probe2 is imec0s
         if session_metadata['probe1_ID'] == 'device_label':
             device_key = 'probe1'
         else:
@@ -105,8 +109,8 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
         # get depths ids in array
         depths = sorting_matfile['depths'].squeeze()
         depths = (device_metadata['Depth']*1000 - depths) * np.cos(math.radians(device_metadata['roll']))
-        # add depth unit column
-        # add hemisphere unit column
+        
+        hemisphere = device_metadata['hemisphere']
             
         # get unit_ids 
         unit_ids = sorting_matfile['unit_ids'].squeeze()
@@ -114,23 +118,37 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
         # Add fields that are not present in every session
         peak_amps, valley_amps = None, None
         if 'peak_amp' in sorting_matfile.keys():
+            if peak_amps not in nwbfile.units.columns:
+                nwbfile.add_unit_column(name='peak_amp', description='Peak amplitude as calculated by spikeinterface')
             peak_amps = sorting_matfile['peak_amp'].squeeze()
         if 'valley_amp' in sorting_matfile.keys():
+            if valley_amps not in nwbfile.units.columns:
+                nwbfile.add_unit_column(name='valley_amp', description='Valley amplitude as calculated by spikeinterface')
             valley_amps = sorting_matfile['valley_amp'].squeeze()
         
         for x in range(len(unit_ids)):
             this_shank_group = "{}.shank{}".format(device_label,shank_ids[x])
             this_electrode_group = nwbfile.electrode_groups[this_shank_group]
-            this_id = int(unit_ids[x].split('_')[-1])
-            cur_ch_list = nwbfile.electrodes.to_dataframe()['channel_id'].values
-            this_ch_idx = np.where(cur_ch_list == channel_ids[x])[0][0]
-
-            nwbfile.add_unit(spike_times=spike_trains[x][0].squeeze(), \
-                waveform_mean = big_wv[x].T, \
-                id=this_id, \
-                electrode_group=this_electrode_group, \
-                electrode=cur_ch_list[this_ch_idx], \
-                depth=depths[x])
-
-        dummy = 1
+            # this_id = int(unit_ids[x].split('_')[-1])
+            this_id = this_shank_group+'.'+unit_ids[x].split('_')[-1]
+            # cur_ch_list = nwbfile.electrodes.to_dataframe()['channel_id'].values
+            # this_ch_idx = np.where(cur_ch_list == channel_ids[x])[0][0]
+            if peak_amps is not None:        
+                nwbfile.add_unit(spike_times=spike_trains[x][0].squeeze(), \
+                    waveform_mean = big_wv[x].T, \
+                    # id=this_id, \
+                    global_id=this_id, \
+                    electrode_group=this_electrode_group, \
+                    depth=depths[x], \
+                    hemisphere=hemisphere, \
+                    peak_amp=peak_amps[x], \
+                    valley_amp=valley_amps[x])    
+            else:
+                nwbfile.add_unit(spike_times=spike_trains[x][0].squeeze(), \
+                    waveform_mean = big_wv[x].T, \
+                    # id=this_id, \
+                    global_id=this_id, \
+                    electrode_group=this_electrode_group, \
+                    depth=depths[x], \
+                    hemisphere=hemisphere)
         

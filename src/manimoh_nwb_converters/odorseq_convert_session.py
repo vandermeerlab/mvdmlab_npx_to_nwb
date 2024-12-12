@@ -66,11 +66,19 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     # add LFP traces to nwb file
     mnc.add_lfp_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
         
-    # add spiking data
-    
+    # Add spiking data
+    device_labels = []
+    if os.path.exists(session_dir + "//clean_units_imec0.mat"):
+        device_labels.append("imec0")
+    if os.path.exists(session_dir + "//clean_units_imec1.mat"):
+        device_labels.append("imec1")
+    mnc.add_sorting_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+    # add spike times, waveforms, and other information to nwb file
+    mnc.add_sorting_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
     
     # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
     io.write(out_nwb)
+    io.close() # This is crtitcal and nwbinspector won't work without it
 
 
