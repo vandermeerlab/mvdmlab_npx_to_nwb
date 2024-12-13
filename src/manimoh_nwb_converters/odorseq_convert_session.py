@@ -76,6 +76,9 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     # add spike times, waveforms, and other information to nwb file
     mnc.add_sorting_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
     
+    # Add behavioral epochs
+    mnc.add_intervals_to_nwb(session_dir, out_nwb, session_metadata)
+    
     # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
     io.write(out_nwb)
