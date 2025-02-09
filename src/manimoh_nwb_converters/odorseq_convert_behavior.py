@@ -2,6 +2,7 @@
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
 
 from pynwb.epoch import TimeIntervals
 
@@ -10,12 +11,13 @@ def add_intervals_to_nwb(session_dir, nwbfile, session_metadata):
     Function to add intervals to the NWB file
     '''
     # Code to add odor presentation times
+    sess_dir = Path(session_dir)
     odor_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
     for oid in odor_ids:
         fname = 'odor{}_channel'.format(oid)
         cname = session_metadata[fname]
-        on_fname = session_dir + "//{}_ON.txt".format(cname)
-        off_fname = session_dir + "//{}_OFF.txt".format(cname)
+        on_fname = os.path.join(sess_dir, "{}_ON.txt".format(cname))
+        off_fname = os.path.join(sess_dir, "{}_OFF.txt".format(cname))
         if os.path.exists(on_fname) and os.path.getsize(on_fname) != 0:
             this_on_times = np.asarray(pd.read_csv(on_fname, header=None)).squeeze()
             this_off_times = np.asarray(pd.read_csv(off_fname, header=None)).squeeze()

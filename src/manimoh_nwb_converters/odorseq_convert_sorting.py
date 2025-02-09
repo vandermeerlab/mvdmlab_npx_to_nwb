@@ -3,12 +3,15 @@
 import scipy.io as sio
 import numpy as np
 import math
+import os
+from pathlib import Path
 
 def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     '''
     Function to add electrodes and devices that 
     '''
     
+    sess_dir = Path(session_dir)
     for device_label in device_labels:
     # Determine whether probe1 or probe2 is imec0s
         if session_metadata['probe1_ID'] == 'device_label':
@@ -27,7 +30,7 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
                 description="4-shank NPX2.0 ", manufacturer="IMEC")
             
         # Reading and parsing the .mat file to add the electrodes that didn't exist in the electrode table before
-        sorting_matfile= sio.loadmat(session_dir + '\\' + 'clean_units_' + device_label + '.mat')
+        sorting_matfile = sio.loadmat(os.path.join(sess_dir, 'clean_units_' + device_label + '.mat'))
     
         # get channel_ids
         channel_ids = sorting_matfile['channel_ids']
@@ -67,6 +70,7 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
     '''
     Function to add spikesorting data to the NWB file.
     '''
+    sess_dir = Path(session_dir)
     nwbfile.add_unit_column(name='depth', description='Depth of the unit from the surface of the brain')
     nwbfile.add_unit_column(name='hemisphere', description='Hemisphere of the brain where the unit was recorded')
     nwbfile.add_unit_column(name='global_id', description='ID to uniquely identify the unit')
@@ -88,7 +92,7 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
                 description="4-shank NPX2.0 ", manufacturer="IMEC")
             
         # Reading and parsing the .mat file
-        sorting_matfile= sio.loadmat(session_dir + '\\' + 'clean_units_' + device_label + '.mat')
+        sorting_matfile = sio.loadmat(os.path.join(sess_dir, 'clean_units_' + device_label + '.mat'))
         
         # Get spike_times
         spike_trains = sorting_matfile['spike_train'].T

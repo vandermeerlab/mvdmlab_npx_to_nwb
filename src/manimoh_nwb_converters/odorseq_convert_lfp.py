@@ -4,6 +4,8 @@ import h5py
 import numpy as np
 import math
 from hdmf.backends.hdf5.h5_utils import H5DataIO
+import os
+from pathlib import Path
 
 from pynwb.ecephys import ElectricalSeries, LFP
 
@@ -12,6 +14,7 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
     Function to add LFP electrodes and probe information to the NWB file.
     '''
     
+    sess_dir = Path(session_dir)
     # Add electrode column to nwb file (This will get poulated later)
     nwbfile.add_electrode_column(name="label", description="Identifier for the channel on the probe") # Calling this label to ensure compatibility with pynapple
     nwbfile.add_electrode_column(name="depth", description="Location of the electrode on the probe")
@@ -34,7 +37,7 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
             description="4-shank NPX2.0 ", manufacturer="IMEC")
         
         # Reading and parsing the .mat file to create the electrode table
-        lfp_matfile = h5py.File(session_dir + '\\' + device_label + '_clean_lfp.mat', 'r')
+        lfp_matfile = h5py.File(os.path.join(sess_dir, device_label + '_clean_lfp.mat'), 'r')
     
         # get channel_ids
         temp_ch_ids = np.asarray(lfp_matfile[device_label]['channel_ids'][:], dtype='uint32')
@@ -71,6 +74,7 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     ''' 
     Function to add LFP traces to the NWB file.
     '''
+    sess_dir = Path(session_dir)
     lfp_fs = 0 # Assumes that this gets overwritten and also that all devices have the same fs
     lfp_tvec = 0 # Assumes that this gets overwritten and also that all devices have the same tvec
     lfp_data = []
@@ -87,7 +91,7 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
             if device_key in key and 'ID' not in key:
                 device_metadata[key.split('_')[-1]] = session_metadata[key]
         
-        lfp_matfile = h5py.File(session_dir + '\\' + device_label + '_clean_lfp.mat', 'r')
+        lfp_matfile = h5py.File(os.path.join(sess_dir, device_label + '_clean_lfp.mat'), 'r')
         
         # Reading and parsing the .mat file to create the electrode table
         temp_ch_ids = np.asarray(lfp_matfile[device_label]['channel_ids'][:], dtype='uint32')
