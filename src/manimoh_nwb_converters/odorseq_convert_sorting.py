@@ -32,8 +32,9 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
         # Reading and parsing the .mat file to add the electrodes that didn't exist in the electrode table before
         sorting_matfile = sio.loadmat(os.path.join(sess_dir, 'clean_units_' + device_label + '.mat'))
     
-        # get channel_ids
-        channel_ids = sorting_matfile['channel_ids']
+        # get channel_ids 
+        if 'channel_ids' in sorting_matfile.keys():
+            channel_ids = sorting_matfile['channel_ids']
         
         # get shank_ids in array
         shank_ids = sorting_matfile['shank_ids'].squeeze()
@@ -103,9 +104,10 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
         big_wv = np.asarray([all_wv[x][y][:] for x,y in enumerate(big_idx)])
         # nwbfile.add_unit_column(name='mean_waveform', description='Mean waveform of the unit from the channel with the highest amplitude')
         
-        # get channel_ids TODO: See if we need to get rid the 'imec0ap.AP#' 
-        channel_ids = sorting_matfile['channel_ids']
-        # nwbfile.add_unit_column(name='channel_id', description='Channel ID on which this neuron was best identified as per spikeinterface')
+        # get channel_ids TODO: See if we need to get rid the 'imec0ap.AP#'
+        if 'channel_ids' in sorting_matfile.keys(): 
+            channel_ids = sorting_matfile['channel_ids']
+            # nwbfile.add_unit_column(name='channel_id', description='Channel ID on which this neuron was best identified as per spikeinterface')
         
         # get shank_ids in array
         shank_ids = sorting_matfile['shank_ids'].squeeze()
