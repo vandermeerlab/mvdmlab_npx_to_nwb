@@ -14,7 +14,7 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
     sess_dir = Path(session_dir)
     for device_label in device_labels:
     # Determine whether probe1 or probe2 is imec0s
-        if session_metadata['probe1_ID'] == 'device_label':
+        if session_metadata['probe1_ID'] == device_label:
             device_key = 'probe1'
         else:
             device_key ='probe2'
