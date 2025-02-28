@@ -11,3 +11,4 @@ dependencies:
     - scipy
     - datetime
     - nwbinspector
+    - git+https://github.com/vandermeerlab/ndx-mvdmlab-metadata.git
