@@ -55,7 +55,7 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
 
     # Create subject
     subject = Subject(subject_id=session_metadata['subject'], age="P8W/",  # Dummy value/hard-coded for now, but replace with logic to calculate from DOB and experiment date
-        species = "Mus musculus", description = "Headbarr-ed mouse with craniotomies over dCA1", 
+        species = "Mus musculus", description = "Headbar-ed mouse with craniotomies over dCA1", 
         sex = "M",  # Dummy value/hard-coded for now, but replace with real value from updated ExpKeys
         )
     out_nwb.subject = subject
@@ -83,6 +83,9 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     
     # Add behavioral epochs
     mnc.add_intervals_to_nwb(session_dir, out_nwb, session_metadata)
+    
+    # Add lab metadata using the custom extension
+    mnc.add_lab_metadata_to_nwb(out_nwb, session_metadata)
     
     # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
