@@ -21,7 +21,7 @@ def convert_multiple_sessions(directory_list):
             output_nwb_filepath = os.path.join(input_dir, output_filename)
             
             # Run the conversion
-            mnc.create_nwb_file(input_dir, output_nwb_filepath)
+            mnc.create_nwb_file(input_dir, output_nwb_filepath, overwrite=True)
             
             print(f"Successfully processed: {input_dir}")
             
@@ -29,22 +29,18 @@ def convert_multiple_sessions(directory_list):
             warnings.warn(f"Failed to process directory: {input_dir}\nError: {str(e)}")
             continue
 
-
 directories = [
-    'E:\\odor-pixels\\fromHector\\NoReward\\M489\\M489-2024-08-05',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M489\\M489-2024-08-07',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M489\\M489-2024-08-08',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M509\\M509-2024-09-10',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M509\\M509-2024-09-11',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M509\\M509-2024-09-12',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M509\\M509-2024-09-13',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M509\\M509-2024-08-31',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M541\\M541-2024-09-01',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M541\\M541-2024-09-02',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M541\\M541-2024-09-02',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M541\\M541-2024-09-04',
-    'E:\\odor-pixels\\fromHector\\NoReward\\M541\\M541-2024-09-05',  
+    'E:\\odor-pixels\\fromHector\\NoReward\\M542\\M542-2024-11-04',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M542\\M542-2024-11-05',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M542\\M542-2024-11-06',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M542\\M542-2024-11-07',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M542\\M542-2024-11-08',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-11',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-12',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-13',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-14',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-15',
+    'E:\\odor-pixels\\fromHector\\NoReward\\M511\\M511-2024-11-16',
     # Add more directories as needed
 ]
-
 convert_multiple_sessions(directories)
