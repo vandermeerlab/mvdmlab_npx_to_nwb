@@ -31,7 +31,7 @@ def parse_expkeys(directory):
         lines = f.readlines()
     
     for line in lines:
-        # Skip commented lines
+        # Skip commented lines (only if the comment starts at the beginning of the line)
         if line.strip().startswith('%'):
             continue
             
@@ -45,8 +45,43 @@ def parse_expkeys(directory):
             # Get key (remove 'ExpKeys.' and strip whitespace)
             key = parts[0].replace('ExpKeys.', '').strip()
             
-            # Get value (remove comments and strip whitespace/semicolon)
-            value = parts[1].split('%')[0].strip().rstrip(';').strip()
+            # Get value part and handle comments properly
+            value_part = parts[1]
+            
+            # Use a more nuanced approach to handle comments
+            # First, let's isolate any quoted strings
+            def replace_quoted_strings(text):
+                """Replace quoted strings with placeholders to protect their content"""
+                placeholders = []
+                
+                # Function to replace a match with a placeholder
+                def replace_match(match):
+                    placeholder = f"PLACEHOLDER_{len(placeholders)}"
+                    # Store the match with its quotes
+                    placeholders.append(match.group(0))
+                    return placeholder
+                
+                # Replace both single and double quoted strings
+                pattern = r'(["\'])(.*?)(?<!\\)\1'
+                modified_text = re.sub(pattern, replace_match, text, flags=re.DOTALL)
+                
+                return modified_text, placeholders
+            
+            # Replace quoted strings with placeholders
+            modified_value, placeholders = replace_quoted_strings(value_part)
+            
+            # Now we can safely split on % for comments outside quotes
+            if '%' in modified_value:
+                modified_value = modified_value.split('%')[0]
+            
+            # Restore the original quoted strings
+            for i, placeholder in enumerate(placeholders):
+                modified_value = modified_value.replace(f"PLACEHOLDER_{i}", placeholder)
+            
+            value_part = modified_value
+            
+            # Remove trailing semicolon and whitespace
+            value = value_part.strip().rstrip(';').strip()
             
             # Handle empty strings
             if value == '""' or value == "''":
@@ -61,9 +96,46 @@ def parse_expkeys(directory):
             
             # Handle cell arrays (like {'UE', 'Odor A', 'Odor B', 'Odor C'})
             if value.startswith('{') and value.endswith('}'):
-                # Extract strings between quotes, handle both single and double quotes
-                cell_values = re.findall(r'["\']([^"\']*)["\']', value)
-                expkeys[key] = cell_values
+                # Extract content between braces
+                array_content = value[1:-1].strip()
+                
+                # Split by commas, but not commas inside quotes
+                items = []
+                current_item = ""
+                in_quotes = False
+                quote_char = None
+                
+                for char in array_content + ',':  # Add a comma at the end to process the last item
+                    if char in ['"', "'"] and (not in_quotes or char == quote_char):
+                        in_quotes = not in_quotes
+                        if in_quotes:
+                            quote_char = char
+                        current_item += char
+                    elif char == ',' and not in_quotes:
+                        items.append(current_item.strip())
+                        current_item = ""
+                    else:
+                        current_item += char
+                
+                # Process each item in the cell array
+                processed_items = []
+                for item in items:
+                    item = item.strip()
+                    if not item:
+                        continue
+                        
+                    # Check if item is a quoted string
+                    if (item.startswith('"') and item.endswith('"')) or \
+                       (item.startswith("'") and item.endswith("'")):
+                        processed_items.append(item[1:-1])
+                    else:
+                        # Try to convert to numeric
+                        try:
+                            processed_items.append(float(item))
+                        except ValueError:
+                            processed_items.append(item)
+                
+                expkeys[key] = processed_items
                 continue
             
             # Try to convert to float for numerical values
@@ -73,11 +145,13 @@ def parse_expkeys(directory):
                 # If conversion fails, store as string
                 expkeys[key] = value
     
-    # Some manual cleanup_stpes
-    if "Manish" in expkeys['experimenter']:
-        expkeys['experimenter'] = "Mohapatra, Manish"
-    elif "Kyoko" in expkeys['experimenter']:
-        expkeys['experimenter'] = "Leaman, Kyoko R."
-    else :
-        expkeys['experimenter'] = "Leaman, Kyoko R."
+    # Some manual cleanup steps
+    if "experimenter" in expkeys:
+        if "Manish" in expkeys['experimenter']:
+            expkeys['experimenter'] = "Mohapatra, Manish"
+        elif "Kyoko" in expkeys['experimenter']:
+            expkeys['experimenter'] = "Leaman, Kyoko R."
+        else:
+            expkeys['experimenter'] = "Leaman, Kyoko R."
+    
     return expkeys
