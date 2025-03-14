@@ -1,4 +1,4 @@
-name: mvdmlab_preproc_nwbconverter
+name: mvdmlab_nwbconverter
 channels:
   - conda-forge
   - defaults

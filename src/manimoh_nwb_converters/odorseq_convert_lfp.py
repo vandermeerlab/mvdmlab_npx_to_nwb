@@ -9,6 +9,8 @@ from pathlib import Path
 
 from pynwb.ecephys import ElectricalSeries, LFP
 
+from neuroconv.tools.spikeinterface.spikeinterface import _get_electrodes_table_global_ids
+
 def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     '''
     Function to add LFP electrodes and probe information to the NWB file.
@@ -79,6 +81,7 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
     lfp_tvec = 0 # Assumes that this gets overwritten and also that all devices have the same tvec
     lfp_data = []
     electrode_counter = 0
+    lfp_channel_ids = []
     for device_label in device_labels:
     # Determine whether probe1 or probe2 is imec0
         if session_metadata['probe1_ID'] == 'device_label':
@@ -97,6 +100,7 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
         temp_ch_ids = np.asarray(lfp_matfile[device_label]['channel_ids'][:], dtype='uint32')
         temp_ch_ids = temp_ch_ids.T.view('U1')
         channel_ids = np.asarray([''.join(x).strip() for x in temp_ch_ids])
+        lfp_channel_ids.extend(channel_ids.tolist())
         electrode_counter += channel_ids.shape[0]
                 
         lfp_fs = lfp_matfile[device_label]['lfp_fs'][:].flatten()[0]
@@ -112,8 +116,11 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
         lfp_data.append(this_data)
      
     # Create LFP table
+    nwb_channel_ids = _get_electrodes_table_global_ids(nwbfile)
+    lfp_channel_ids = [x.strip() for x in lfp_channel_ids]
+    nwb_table_indices = _match_indices(nwb_channel_ids,lfp_channel_ids)
     lfp_table = nwbfile.create_electrode_table_region(\
-        region=list(range(electrode_counter)),  # reference row indices 0 to N-1\
+        region=nwb_table_indices,  # reference row indices in the electrode table corresponding to the lfp table
         description="LFP electrodes")   
     
     if len(lfp_data) > 1:
@@ -129,3 +136,37 @@ def add_lfp_data_to_nwb(session_dir, nwbfile, session_metadata, device_labels):
         name="ecephys", description="LFP data obtained from rawdata"
     )
     lfp_module.add(lfp_es)
+    
+def _match_indices(electrode_table_channel_ids, matfile_channel_ids):
+    # Initialize the result list with None values
+    result = [None] * len(matfile_channel_ids)
+    
+    # Create a dictionary to map (imec_num, ap_num) pairs to indices in electrode_table_channel_ids
+    x_map = {}
+    for i, x_item in enumerate(electrode_table_channel_ids):
+        # Extract the AP number from strings like 'AP200_NeuropixelsImec0Shank2'
+        parts = x_item.split('_')
+        ap_num = parts[0].replace('AP', '')
+        
+        # Extract the imec number from 'NeuropixelsImec0Shank2'
+        if len(parts) > 1 and 'Imec' in parts[1]:
+            imec_str = parts[1]
+            imec_num = imec_str[imec_str.index('Imec')+4:imec_str.index('Shank')]
+            key = (imec_num, ap_num)
+            x_map[key] = i
+    
+    # For each item in matfile_channel_ids, find the matching index in electrode_table_channel_ids
+    for j, y_item in enumerate(matfile_channel_ids):
+        # Extract the imec number from strings like 'imec0.ap#AP200'
+        imec_part = y_item.split('.')[0]
+        imec_num = imec_part.replace('imec', '')
+        
+        # Extract the AP number
+        ap_num = y_item.split('#AP')[1]
+        
+        # Look up this (imec_num, ap_num) pair in our map
+        key = (imec_num, ap_num)
+        if key in x_map:
+            result[j] = x_map[key]
+    
+    return result

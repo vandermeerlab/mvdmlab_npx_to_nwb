@@ -1,6 +1,8 @@
 """Primary script to run to convert an entire session of preprocessed mvdmlab NPX data."""
 from pathlib import Path
 import os
+import numpy as np
+import math
 from datetime import datetime
 
 from pynwb import NWBHDF5IO, NWBFile
@@ -8,8 +10,12 @@ from pynwb.ecephys import LFP, ElectricalSeries, SpikeEventSeries
 from pynwb.file import Subject
 
 from neuroconv.datainterfaces.ecephys.spikeglx.spikeglxdatainterface import SpikeGLXRecordingInterface
-from neuroconv.tools.spikeinterface.spikeinterface import add_electrodes_info_to_nwbfile
-
+from neuroconv.tools.spikeinterface.spikeinterface import (
+    add_electrodes_info_to_nwbfile, 
+    add_devices_to_nwbfile, 
+    add_electrode_groups_to_nwbfile,
+    add_electrodes_to_nwbfile
+)
 import manimoh_utils as mu
 import manimoh_nwb_converters as mnc
 
@@ -35,13 +41,13 @@ def create_nwb_file(raw_dirpath, preprocessed_dirpath, output_nwb_filepath, over
     raw_dir = Path(raw_dirpath)
     preprocessed_dir = Path(preprocessed_dirpath)
     output_nwb_file = Path(output_nwb_filepath)
-    
+
     if output_nwb_file.exists() and not overwrite:
         raise FileExistsError(f"File {output_nwb_file} already exists. Set overwrite=True to overwrite.")
-    
+
     # Get preprocessed_metadata present in ExpKeys file to determine which interfaces to create
     preprocessed_metadata = mu.parse_expkeys(preprocessed_dir)
-    
+
     raw_interface = SpikeGLXRecordingInterface(folder_path=raw_dir, stream_id=f"{preprocessed_metadata['probe1_ID']}.ap")
     raw_metadata = raw_interface.get_metadata()
 
@@ -66,24 +72,39 @@ def create_nwb_file(raw_dirpath, preprocessed_dirpath, output_nwb_filepath, over
         sex = preprocessed_metadata['sex'],
         )
     out_nwb.subject = subject
-    
+
     # Add all electrodes from the first probe
+    distance_from_tip = raw_interface.recording_extractor.get_channel_locations()[:,1]
+    this_depth = (preprocessed_metadata["probe1_Depth"]*1000 - distance_from_tip) * \
+        np.cos(math.radians(preprocessed_metadata["probe1_insertion_roll"]))
+    raw_interface.recording_extractor.set_property('recording_depth', values=this_depth)
+    # Adding description of the new column to the metadata (Otherwise nwbinspector will cry that there is no description)
+    raw_metadata['Ecephys']['Electrodes'].append({
+        'name': 'recording_depth',
+        'description': 'Depth of electrode from brain surface in micrometers, based on experimental annotation'
+    })
     add_electrodes_info_to_nwbfile(recording=raw_interface.recording_extractor, nwbfile=out_nwb, metadata=raw_metadata)
     # if 2nd probe exists, then add electrodes from that too
     if 'probe2_ID' in preprocessed_metadata.keys():
         raw_interface2 = SpikeGLXRecordingInterface(folder_path=raw_dir, stream_id=f"{preprocessed_metadata['probe2_ID']}.ap")
         raw_metadata2 = raw_interface2.get_metadata()
-        add_electrodes_info_to_nwbfile(recording=raw_interface2.recording_extractor, nwbfile=out_nwb, metadata=raw_metadata2)
-        
-        
+        distance_from_tip = raw_interface2.recording_extractor.get_channel_locations()[:,1]
+        this_depth = (preprocessed_metadata["probe2_Depth"]*1000 - distance_from_tip) * \
+            np.cos(math.radians(preprocessed_metadata["probe2_insertion_roll"]))
+        raw_interface2.recording_extractor.set_property('recording_depth', values=this_depth)
+        # Adding description of the new column to the metadata (Otherwise nwbinspector will cry that there is no description)
+        raw_metadata2['Ecephys']['Electrodes'].append({
+            'name': 'recording_depth',
+            'description': 'Depth of electrode from brain surface in micrometers, based on experimental annotation'
+        })
+        add_electrodes_info_to_nwbfile(recording=raw_interface2.recording_extractor, nwbfile=out_nwb, metadata=raw_metadata2)  
+            
     # Add LFP data
     device_labels = []
     if os.path.exists(os.path.join(preprocessed_dir,"imec0_clean_lfp.mat")):
         device_labels.append("imec0")
     if os.path.exists(os.path.join(preprocessed_dir,"imec1_clean_lfp.mat")):
         device_labels.append("imec1")
-    # add LFP electrodes table to nwb file
-    mnc.add_lfp_electrodes_to_nwb(preprocessed_dir, out_nwb, preprocessed_metadata, device_labels)
     # add LFP traces to nwb file
     mnc.add_lfp_data_to_nwb(preprocessed_dir, out_nwb, preprocessed_metadata, device_labels)
         
@@ -93,8 +114,6 @@ def create_nwb_file(raw_dirpath, preprocessed_dirpath, output_nwb_filepath, over
         device_labels.append("imec0")
     if os.path.exists(os.path.join(preprocessed_dir,"clean_units_imec1.mat")):
         device_labels.append("imec1")
-    mnc.add_sorting_electrodes_to_nwb(preprocessed_dir, out_nwb, preprocessed_metadata, device_labels)
-    # add spike times, waveforms, and other information to nwb file
     mnc.add_sorting_data_to_nwb(preprocessed_dir, out_nwb, preprocessed_metadata, device_labels)
     
     # Add behavioral epochs
