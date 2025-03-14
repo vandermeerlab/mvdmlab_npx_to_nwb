@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # import manimoh_nwb_converters as mnc
 
 # raw_session_dir = '/mnt/datasets/incoming/mvdm/OdorSequence/sourcedata/raw/M541/M541-2024-08-31_g0'
