@@ -74,16 +74,34 @@ def create_nwb_file(raw_dirpath, preprocessed_dirpath, output_nwb_filepath, over
     out_nwb.subject = subject
 
     # Add all electrodes from the first probe
+    # Adding depth as a property
     distance_from_tip = raw_interface.recording_extractor.get_channel_locations()[:,1]
     this_depth = (preprocessed_metadata["probe1_Depth"]*1000 - distance_from_tip) * \
         np.cos(math.radians(preprocessed_metadata["probe1_insertion_roll"]))
     raw_interface.recording_extractor.set_property('recording_depth', values=this_depth)
+    # Adding label and hemisphere as additional properties
+    imec_id = [(x.split('.')[0]).replace('imec','') for x in raw_interface.recording_extractor.get_channel_ids()]
+    channel_id = [(x.split('#')[-1]) for x in raw_interface.recording_extractor.get_channel_ids()]
+    shank_id =  raw_interface.recording_extractor.get_channel_groups().tolist()
+    this_label = [f"imec{imec_id[x]}_shank{shank_id[x]}_{channel_id[x]}" for x in range(len(imec_id))]
+    raw_interface.recording_extractor.set_property('label', values=this_label)
+    this_hemi = np.repeat(preprocessed_metadata['probe1_hemisphere'], len(this_label))
+    raw_interface.recording_extractor.set_property('hemisphere', values=this_hemi)
     # Adding description of the new column to the metadata (Otherwise nwbinspector will cry that there is no description)
     raw_metadata['Ecephys']['Electrodes'].append({
         'name': 'recording_depth',
         'description': 'Depth of electrode from brain surface in micrometers, based on experimental annotation'
     })
-    add_electrodes_info_to_nwbfile(recording=raw_interface.recording_extractor, nwbfile=out_nwb, metadata=raw_metadata)
+    raw_metadata['Ecephys']['Electrodes'].append({
+        'name': 'label',
+        'description': 'Unique human-readable label for each recording channel'
+    })
+    raw_metadata['Ecephys']['Electrodes'].append({
+        'name': 'hemisphere',
+        'description': 'Brain hemisphere where this recording electrode was present'
+    })
+    add_electrodes_info_to_nwbfile(recording=raw_interface.recording_extractor, 
+        nwbfile=out_nwb, metadata=raw_metadata)
     # if 2nd probe exists, then add electrodes from that too
     if 'probe2_ID' in preprocessed_metadata.keys():
         raw_interface2 = SpikeGLXRecordingInterface(folder_path=raw_dir, stream_id=f"{preprocessed_metadata['probe2_ID']}.ap")
@@ -92,12 +110,29 @@ def create_nwb_file(raw_dirpath, preprocessed_dirpath, output_nwb_filepath, over
         this_depth = (preprocessed_metadata["probe2_Depth"]*1000 - distance_from_tip) * \
             np.cos(math.radians(preprocessed_metadata["probe2_insertion_roll"]))
         raw_interface2.recording_extractor.set_property('recording_depth', values=this_depth)
+        # Adding label and hemisphere as additional properties
+        imec_id2 = [(x.split('.')[0]).replace('imec','') for x in raw_interface2.recording_extractor.get_channel_ids()]
+        channel_id2 = [(x.split('#')[-1]) for x in raw_interface2.recording_extractor.get_channel_ids()]
+        shank_id2 =  raw_interface2.recording_extractor.get_channel_groups().tolist()
+        this_label2 = [f"imec{imec_id2[x]}_shank{shank_id2[x]}_{channel_id2[x]}" for x in range(len(imec_id2))]
+        raw_interface2.recording_extractor.set_property('label', values=this_label2)
+        this_hemi2 = np.repeat(preprocessed_metadata['probe1_hemisphere'], len(this_label2))
+        raw_interface2.recording_extractor.set_property('hemisphere', values=this_hemi2)
         # Adding description of the new column to the metadata (Otherwise nwbinspector will cry that there is no description)
         raw_metadata2['Ecephys']['Electrodes'].append({
             'name': 'recording_depth',
             'description': 'Depth of electrode from brain surface in micrometers, based on experimental annotation'
         })
-        add_electrodes_info_to_nwbfile(recording=raw_interface2.recording_extractor, nwbfile=out_nwb, metadata=raw_metadata2)  
+        raw_metadata2['Ecephys']['Electrodes'].append({
+            'name': 'label',
+            'description': 'Unique human-readable label for each recording channel'
+        })
+        raw_metadata2['Ecephys']['Electrodes'].append({
+            'name': 'hemisphere',
+            'description': 'Brain hemisphere where this recording electrode was present'
+        })
+        add_electrodes_info_to_nwbfile(recording=raw_interface2.recording_extractor,
+            nwbfile=out_nwb, metadata=raw_metadata2)
             
     # Add LFP data
     device_labels = []
