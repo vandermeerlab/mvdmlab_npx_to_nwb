@@ -13,3 +13,4 @@ dependencies:
     - nwbinspector
     - neuroconv[spikeglx]
     - git+https://github.com/vandermeerlab/ndx-mvdmlab-metadata.git
+    - pymatreader
