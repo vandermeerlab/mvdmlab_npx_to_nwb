@@ -11,3 +11,4 @@ dependencies:
     - scipy
     - datetime
     - nwbinspector
+    - pymatreader
