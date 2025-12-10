@@ -28,6 +28,8 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
             # TODO: Should the description be changed to something more standard?
             device = nwbfile.create_device(name=device_label, \
                 description="4-shank NPX2.0 ", manufacturer="IMEC")
+        else: 
+            device = nwbfile.devices[device_label]
             
         # Reading and parsing the .mat file to add the electrodes that didn't exist in the electrode table before
         sorting_matfile = sio.loadmat(os.path.join(sess_dir, 'clean_units_' + device_label + '.mat'))
@@ -96,43 +98,83 @@ def add_sorting_data_to_nwb(session_dir, nwbfile, session_metadata, device_label
         sorting_matfile = sio.loadmat(os.path.join(sess_dir, 'clean_units_' + device_label + '.mat'))
         
         # Get spike_times
-        spike_trains = sorting_matfile['spike_train'].T
-        
+        spike_trains = sorting_matfile['spike_train']
+        # spike_trains = sorting_matfile['spike_train'].T
+        # This is to handle the case where there is only one clean unit, it's disgusting code but it runs (assumes you don't have >500 clean units)
+        if spike_trains.shape[1] > 500:
+            obj_array = np.empty((1,1), dtype=object)
+            obj_array[0,0] = spike_trains 
+            spike_trains = obj_array
+        else:
+            spike_trains = spike_trains.T
+
         # Get average waveform from the best channel
         all_wv = sorting_matfile['mean_waveforms'].squeeze()
-        big_idx = [np.argmax(abs(np.max(all_wv[x], axis=1) - np.min(all_wv[x], axis=1))) for x in range(all_wv.shape[0])]
-        big_wv = np.asarray([all_wv[x][y][:] for x,y in enumerate(big_idx)])
+        if all_wv.ndim == 2:
+            # This will be accessed if there's only one clean unit - EG added
+            big_idx = [np.argmax(abs(np.max(all_wv[x]) - np.min(all_wv[x]))) for x in range(all_wv.shape[0])] 
+            big_wv = all_wv[big_idx, :]
+        elif all_wv.ndim == 1:
+            # This will be accessed if there is more than one unit
+            big_idx = [np.argmax(abs(np.max(all_wv[x], axis=1) - np.min(all_wv[x], axis=1))) for x in range(all_wv.shape[0])]
+            big_wv = np.asarray([all_wv[x][y][:] for x,y in enumerate(big_idx)])
         # nwbfile.add_unit_column(name='mean_waveform', description='Mean waveform of the unit from the channel with the highest amplitude')
-        
+
         # get channel_ids TODO: See if we need to get rid the 'imec0ap.AP#'
         if 'channel_ids' in sorting_matfile.keys(): 
             channel_ids = sorting_matfile['channel_ids']
             # nwbfile.add_unit_column(name='channel_id', description='Channel ID on which this neuron was best identified as per spikeinterface')
-        
+
         # get shank_ids in array
-        shank_ids = sorting_matfile['shank_ids'].squeeze()
-        
+        if sorting_matfile['shank_ids'].shape == (1,1):
+            shank_ids = sorting_matfile['shank_ids'].flatten()
+        else:
+            shank_ids = sorting_matfile['shank_ids'].squeeze()
+
         # get depths ids in array
-        depths = sorting_matfile['depths'].squeeze()
+        if sorting_matfile['depths'].shape == (1,1):
+            depths = sorting_matfile['depths']
+        else:
+            depths = sorting_matfile['depths'].squeeze()
         depths = (device_metadata['Depth']*1000 - depths) * np.cos(math.radians(device_metadata['roll']))
-        
+
         this_hemi = device_metadata['hemisphere']
             
-        # get unit_ids 
-        unit_ids = sorting_matfile['unit_ids'].squeeze()
+        # get unit_ids
+        if sorting_matfile['unit_ids'].shape == (1,):
+            unit_ids = sorting_matfile['unit_ids']
+        else:
+            unit_ids = sorting_matfile['unit_ids'].squeeze()
         
-        for x in range(len(unit_ids)):
-            this_shank_group = "{}.shank{}".format(device_label,shank_ids[x])
-            this_electrode_group = nwbfile.electrode_groups[this_shank_group]
-            this_id = this_shank_group+'.'+unit_ids[x].split('_')[-1]
-            nwbfile.add_unit(spike_times=spike_trains[x][0].squeeze(), \
-                waveform_mean = big_wv[x].T, \
-                # id=this_id, \
-                global_id=this_id, \
-                electrode_group=this_electrode_group, \
-                depth=depths[x], \
-                hemisphere=this_hemi)
-    
+        if len(unit_ids) > 1:
+            # multiple units, loop through all
+            for x in range(len(unit_ids)):
+                this_shank_group = "{}.shank{}".format(device_label,shank_ids[x])
+                this_electrode_group = nwbfile.electrode_groups[this_shank_group]
+                this_id = this_shank_group+'.'+unit_ids[x].split('_')[-1]
+                nwbfile.add_unit(spike_times=spike_trains[x][0].squeeze(), \
+                    waveform_mean = big_wv[x].T, \
+                    # id=this_id, \
+                    global_id=this_id, \
+                    electrode_group=this_electrode_group, \
+                    depth=depths[x], \
+                    hemisphere=this_hemi)
+        else:
+            # single unit, run once
+            x = 0
+            this_shank_group = "{}.shank{}".format(device_label, shank_ids[x])
+            if this_shank_group in nwbfile.electrode_groups:
+                this_electrode_group = nwbfile.electrode_groups[this_shank_group]
+                this_id = this_shank_group + '.' + unit_ids[x].split('_')[-1]
+                nwbfile.add_unit(
+                    spike_times=spike_trains[x][0].squeeze(), \
+                    waveform_mean=big_wv[x].T, \
+                    global_id=this_id, \
+                    electrode_group=this_electrode_group, \
+                    depth=depths[x][0], \
+                    hemisphere=this_hemi)
+            else:
+                print(f"Warning: Electrode group {this_shank_group} not found in NWB file.")
         
         # # Adding peak and valley amps is not simple as they are ragged arrays; skipping for now
         # # Add fields that are not present in every session
