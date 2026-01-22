@@ -12,7 +12,7 @@ def add_intervals_to_nwb(session_dir, nwbfile, session_metadata):
     '''
     # Code to add odor presentation times
     sess_dir = Path(session_dir)
-    odor_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+    odor_ids = ['A', 'B', 'C', 'D', 'E', 'F']
     for oid in odor_ids:
         fname = 'odor{}_channel'.format(oid)
         cname = session_metadata[fname]
@@ -23,12 +23,29 @@ def add_intervals_to_nwb(session_dir, nwbfile, session_metadata):
             this_off_times = np.asarray(pd.read_csv(off_fname, header=None)).squeeze()
             # Clean up the on and off times
             # print('Cleaning up ON and OFF times for Odor {}'.format(oid))
-            clean_on, clean_off= match_on_off_times(this_on_times, this_off_times)
+            clean_on, clean_off= match_on_off_times(this_on_times, this_off_times, expected_delay=1.0) # Odor for 1 second for vHC
             this_on = TimeIntervals(name = "Odor {} ON".format(oid), \
                 description = "Intervals when Odor {} was being presented".format(oid))
             for x in range(len(clean_on)):
                 this_on.add_row(start_time= clean_on[x], stop_time = clean_off[x])
             nwbfile.add_time_intervals(this_on)
+    # Code to add US onset and offset times - need to check to see if it still works without any US
+    US_ids = ['reward', 'airpuff']
+    for uid in US_ids:
+        fname = '{}_channel'.format(uid)
+        cname = session_metadata[fname]
+        on_fname = os.path.join(sess_dir, "{}_ON.txt".format(cname))
+        off_fname = os.path.join(sess_dir, "{}_OFF.txt".format(cname))
+        if os.path.exists(on_fname) and os.path.getsize(on_fname) != 0:
+            us_on_times = np.asarray(pd.read_csv(on_fname, header=None)).squeeze()
+            us_off_times = np.asarray(pd.read_csv(off_fname, header=None)).squeeze()
+            # Clean up the on and off times
+            clean_us_on, clean_us_off = match_on_off_times(us_on_times, us_off_times, expected_delay=0.01, tolerance=0.01) # US duration is very short
+            us_intervals = TimeIntervals(name="{} US".format(uid.capitalize()), \
+                description="Intervals when {} was being delivered".format(uid.capitalize()))
+            for x in range(len(clean_us_on)):
+                us_intervals.add_row(start_time=clean_us_on[x], stop_time=clean_us_off[x])
+            nwbfile.add_time_intervals(us_intervals)
     # Code to add block start and end times
     block_ids = [1,2,3]
     # Some code to add ExpKeys for blocks
