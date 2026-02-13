@@ -83,6 +83,7 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     
     # Add behavioral epochs
     mnc.add_intervals_to_nwb(session_dir, out_nwb, session_metadata)
+    mnc.add_timestamps_to_nwb(session_dir, out_nwb, session_metadata)
     
     # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
