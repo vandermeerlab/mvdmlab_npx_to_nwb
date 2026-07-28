@@ -14,10 +14,10 @@ def convert_multiple_sessions(directory_list):
         try:
             # Extract the date from the directory name (assuming format like 'M540-2024-08-20')
             dir_name = os.path.basename(input_dir)
-            date_str = dir_name.split('-', 1)[1]  # Get everything after first dash
+            date_str = dir_name.split('_', 1)[1]  # Get everything after first dash
             
             # Construct output filepath in the same directory
-            output_filename = f"test_{date_str}.nwb"
+            output_filename = f"{date_str}.nwb"
             output_nwb_filepath = os.path.join(input_dir, output_filename)
             
             # Run the conversion
