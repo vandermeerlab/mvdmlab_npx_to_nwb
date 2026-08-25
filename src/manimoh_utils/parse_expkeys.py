@@ -73,11 +73,13 @@ def parse_expkeys(directory):
                 # If conversion fails, store as string
                 expkeys[key] = value
     
-    # Some manual cleanup_stpes
+    # Some manual cleanup_steps
     if "Manish" in expkeys['experimenter']:
         expkeys['experimenter'] = "Mohapatra, Manish"
     elif "Kyoko" in expkeys['experimenter']:
         expkeys['experimenter'] = "Leaman, Kyoko R."
+    elif "Mimi" in expkeys['experimenter']:
+        expkeys['experimenter'] = "Janssen, Mimi"
     else :
         expkeys['experimenter'] = "Leaman, Kyoko R."
     return expkeys
