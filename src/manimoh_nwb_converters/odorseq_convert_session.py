@@ -14,9 +14,9 @@ from pynwb.file import Subject
 import manimoh_utils as mu
 import manimoh_nwb_converters as mnc
 
-def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
+def create_nwb_file(session_dir, nwb_file_path, overwrite=False, add_lfp=True, add_spikes=True, add_behavior=True):
     """Create an NWB file from the data in the session directory.
-    
+
     Parameters
     ----------
     session_dir : str or Path
@@ -25,7 +25,13 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
         The path to the NWB file to create.
     overwrite : bool, optional
         If True, overwrite the NWB file if it already exists. If False, raise an error if the file already exists.
-    
+    add_lfp : bool, optional
+        Whether this session has LFP data to add. If True and no LFP files are found, an error is raised.
+    add_spikes : bool, optional
+        Whether this session has spike-sorted unit data to add. If True and no sorting files are found, an error is raised.
+    add_behavior : bool, optional
+        Whether this session has behavioral epoch/interval data to add.
+
     Returns
     -------
     nwb_file : NWBFile
@@ -61,28 +67,41 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     out_nwb.subject = subject
     
     # Add LFP data
-    device_labels = []
-    if os.path.exists(os.path.join(session_dir,"imec0_clean_lfp.mat")):
-        device_labels.append("imec0")
-    if os.path.exists(os.path.join(session_dir,"imec1_clean_lfp.mat")):
-        device_labels.append("imec1")
-    # add LFP electrodes table to nwb file
-    mnc.add_lfp_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
-    # add LFP traces to nwb file
-    mnc.add_lfp_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
-        
+    if add_lfp:
+        device_labels = []
+        if os.path.exists(os.path.join(session_dir,"imec0_clean_lfp.mat")):
+            device_labels.append("imec0")
+        if os.path.exists(os.path.join(session_dir,"imec1_clean_lfp.mat")):
+            device_labels.append("imec1")
+        if not device_labels:
+            raise FileNotFoundError(
+                f"add_lfp=True but no *_clean_lfp.mat files were found in {session_dir}. "
+                "Pass add_lfp=False if this session has no LFP data."
+            )
+        # add LFP electrodes table to nwb file
+        mnc.add_lfp_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+        # add LFP traces to nwb file
+        mnc.add_lfp_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+
     # Add spiking data
-    device_labels = []
-    if os.path.exists(os.path.join(session_dir,"clean_units_imec0.mat")):
-        device_labels.append("imec0")
-    if os.path.exists(os.path.join(session_dir,"clean_units_imec1.mat")):
-        device_labels.append("imec1")
-    mnc.add_sorting_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
-    # add spike times, waveforms, and other information to nwb file
-    mnc.add_sorting_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
-    
+    if add_spikes:
+        device_labels = []
+        if os.path.exists(os.path.join(session_dir,"clean_units_imec0.mat")):
+            device_labels.append("imec0")
+        if os.path.exists(os.path.join(session_dir,"clean_units_imec1.mat")):
+            device_labels.append("imec1")
+        if not device_labels:
+            raise FileNotFoundError(
+                f"add_spikes=True but no clean_units_*.mat files were found in {session_dir}. "
+                "Pass add_spikes=False if this session has no spike-sorted data."
+            )
+        mnc.add_sorting_electrodes_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+        # add spike times, waveforms, and other information to nwb file
+        mnc.add_sorting_data_to_nwb(session_dir, out_nwb, session_metadata, device_labels)
+
     # Add behavioral epochs
-    mnc.add_intervals_to_nwb(session_dir, out_nwb, session_metadata)
+    if add_behavior:
+        mnc.add_intervals_to_nwb(session_dir, out_nwb, session_metadata)
     
     # Write NWB file
     io = NWBHDF5IO(nwb_file_path, mode='w')
