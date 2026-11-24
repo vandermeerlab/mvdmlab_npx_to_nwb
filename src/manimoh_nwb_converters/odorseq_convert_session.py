@@ -43,15 +43,15 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     
     out_nwb = NWBFile(
     session_description=session_metadata['notes'], 
-    identifier='-'.join([session_metadata['subject'], session_metadata['date']]),
+    identifier='_'.join([session_metadata['subject'], session_metadata['date']]),
     session_start_time=datetime.now(tzlocal()), # Get from .meta file
     experimenter=[
         session_metadata['experimenter']
     ],
     lab="vandermeerlab",
     institution="Dartmouth College",
-    experiment_description="Head-fixed mouse presented with odor sequences",
-    keywords=["ecephys", "neuropixels", "odor-sequences", "hippocampus"], # needs to be edited
+    experiment_description="Head-fixed mouse presented with odors paired with appetitive and aversive outcomes",
+    keywords=["ecephys", "neuropixels", "hippocampus", "associative learning"], # needs to be edited
     )
 
     # Create subject
