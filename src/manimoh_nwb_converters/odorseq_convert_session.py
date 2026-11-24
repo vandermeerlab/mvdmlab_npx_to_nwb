@@ -13,6 +13,7 @@ from pynwb.file import Subject
 
 import manimoh_utils as mu
 import manimoh_nwb_converters as mnc
+import efbg_utils as efbg
 
 def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     """Create an NWB file from the data in the session directory.
@@ -54,9 +55,10 @@ def create_nwb_file(session_dir, nwb_file_path, overwrite=False):
     )
 
     # Create subject
-    subject = Subject(subject_id=session_metadata['subject'], age="P8W/",  # Dummy value/hard-coded for now, but replace with logic to calculate from DOB and experiment date
-        species = "Mus musculus", description = "Headbarr-ed mouse with craniotomies over dCA1", 
-        sex = "M",  # Dummy value/hard-coded for now, but replace with real value from updated ExpKeys
+    subject = Subject(subject_id=session_metadata['subject'], age=efbg.get_age(session_metadata['DOB'], session_metadata['date']),
+        species = "Mus musculus", description = "Headbarr-ed mouse with craniotomies over dvCA1", 
+        sex = (session_metadata['sex'])[0], # need the first letter of the sex string, e.g. 'M' or 'F'
+        weight = (session_metadata['mouse_weight'])/1000
         )
     out_nwb.subject = subject
     
