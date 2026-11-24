@@ -33,8 +33,12 @@ def add_lfp_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device_lab
                 device_metadata[key.split('_')[-1]] = session_metadata[key]
         
         # TODO: Should the description be changed to something more standard?
+        # device = nwbfile.create_device(name=device_label, \
+            # description="4-shank NPX2.0 ", manufacturer="IMEC")
+
+        # TODO: Should the description be changed to something more standard?
         device = nwbfile.create_device(name=device_label, \
-            description="4-shank NPX2.0 ", manufacturer="IMEC")
+            description="NPX2.0 Quad Base", manufacturer="IMEC")
         
         # Reading and parsing the .mat file to create the electrode table
         lfp_matfile = h5py.File(os.path.join(sess_dir, device_label + '_clean_lfp.mat'), 'r')
