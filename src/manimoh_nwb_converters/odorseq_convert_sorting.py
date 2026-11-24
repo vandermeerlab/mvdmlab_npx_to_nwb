@@ -26,8 +26,11 @@ def add_sorting_electrodes_to_nwb(session_dir, nwbfile, session_metadata, device
         
         if device_label not in nwbfile.devices.keys():
             # TODO: Should the description be changed to something more standard?
-            device = nwbfile.create_device(name=device_label, \
-                description="4-shank NPX2.0 ", manufacturer="IMEC")
+            # device = nwbfile.create_device(name=device_label, \
+                #description="4-shank NPX2.0 ", manufacturer="IMEC")
+            # TODO: Should the description be changed to something more standard?
+                device = nwbfile.create_device(name=device_label, \
+                    description="NPX2.0 Quad Base", manufacturer="IMEC")
         else: 
             device = nwbfile.devices[device_label]
             
