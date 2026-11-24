@@ -49,7 +49,7 @@ def parse_expkeys(directory):
             value = parts[1].split('%')[0].strip().rstrip(';').strip()
             
             # Handle empty strings
-            if value == '""' or value == "''":
+            if value == '""' or value == "''" or value == '[]':
                 expkeys[key] = None
                 continue
             
@@ -80,6 +80,8 @@ def parse_expkeys(directory):
         expkeys['experimenter'] = "Leaman, Kyoko R."
     elif "Mimi" in expkeys['experimenter']:
         expkeys['experimenter'] = "Janssen, Mimi"
+    elif "Emma" in expkeys['experimenter']:
+        expkeys['experimenter'] = "Gibbens, Emma"
     else :
         expkeys['experimenter'] = "Leaman, Kyoko R."
     return expkeys
